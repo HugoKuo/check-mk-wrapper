@@ -1,0 +1,49 @@
+#! /usr/bin/python
+
+#####################################################################
+# This is the wrapper script for SwiftStack NRPE plugin.            #
+# The output format matches the requirement of Check_mk local check #
+# Maintainer : Hugo Kuo                                             #
+# Date : 24th Jun 2016                                              #
+#####################################################################
+
+import subprocess
+
+# Worker name and threshoolds
+WORKER = "object-replicator"
+WARNING = 24
+CRITICAL = 100
+
+check_name = "Swift_Sweep_%s" % WORKER
+ss_plugin_cmd = '/usr/bin/check_swift_sweep_time -w %s -c %s %s' % (WARNING, CRITICAL, WORKER)
+
+try:
+    nrpe_output = subprocess.check_output(ss_plugin_cmd.split())
+except subprocess.CalledProcessError as e:
+    nrpe_output = e.output
+
+# Output format examples of NRPE & check_mk requirement
+# NRPE : SWIFT DAEMON object-auditor SWEEP TIME OKAY- sweep time: 0.09 hrs;
+# NRPE : SWIFT DAEMON container-updater SWEEP TIME UNKNOWN;
+# 0 dbaas_health_check status=200 DBaaS currently healthy
+# 0 Daemon_$WORKER status=0 Last $WORKER log was $time old
+
+alarm_str = nrpe_output.split()[5]
+org_msg = nrpe_output.split()[6:]
+alarm_code = {
+        'OKAY-': 0,
+        'WARNING-': 1,
+        'CRITICAL-': 2,
+        'UNKNOWN;': 3
+        }[alarm_str]
+
+if alarm_code == 3:
+    sweep_time = 0
+    check_msg = 'UNKNOWN stat contact SwiftStack support'
+else:
+    sweep_time = float(nrpe_output.split()[8])
+    check_msg = WORKER + " last completed cycle was %.1f hours ago" % sweep_time
+
+print "%s %s status=%.1f %s" % (alarm_code, check_name, sweep_time, check_msg)
+
+exit(0)

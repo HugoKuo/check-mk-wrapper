@@ -1,0 +1,57 @@
+#! /usr/bin/python
+
+#####################################################################
+# This is the wrapper script for SwiftStack NRPE plugin.            #
+# The output format matches the requirement of Check_mk local check #
+# Maintainer : Hugo Kuo                                             #
+# Date : 24th Jun 2016                                              #
+#####################################################################
+
+import subprocess
+
+# Worker name and threshoolds
+WORKER = "account-reaper"
+WARNING = 24
+CRITICAL = 50
+
+check_name = "Swift_Daemon_%s" % WORKER
+ss_plugin_cmd='/usr/bin/check_swift_background_daemon -w %s -c %s %s' % (WARNING, CRITICAL, WORKER)
+
+try:
+    nrpe_output = subprocess.check_output(ss_plugin_cmd.split())
+except subprocess.CalledProcessError as e:
+    nrpe_output = e.output
+
+# Output format examples of NRPE & check_mk requirement
+# NRPE : SWIFT DAEMON object-replicator OKAY- last log message 0.0 hours old;
+# NRPE : SWIFT DAEMON account-replicator CRITICAL- last log message 0.0 hours old;
+# NRPE : SWIFT DAEMON container-updater CRITICAL- container-updater not running;
+# NRPE : SWIFT DAEMON container-updater CRITICAL- could not find log message for container-updater;
+# NRPE : SWIFT DAEMON container-updater UNKNOWN
+# 0 dbaas_health_check status=200 DBaaS currently healthy
+# 0 Daemon_$WORKER status=0 Last $WORKER log was $time old
+
+alarm_str = nrpe_output.split()[3]
+org_msg = nrpe_output.split()[4:]
+alarm_code = {
+        'OKAY-': 0,
+        'WARNING-': 1,
+        'CRITICAL-': 2,
+        'UNKNOWN-': 3,
+        'UNKNOWN;': 3,
+        'UNKNOWN': 3
+        }[alarm_str]
+
+if alarm_code == 2 and nrpe_output.split()[4] != 'last':
+    last_til_now = 0
+    check_msg = "%s" % ' '.join(str(e) for e in org_msg)
+elif alarm_code == 3:
+    last_til_now = 0
+    check_msg = 'UNKNOWN stat contact SwiftStack support'
+else:
+    last_til_now = float(nrpe_output.split()[7])
+    check_msg = WORKER + " last reported log was %.1f hours ago" % last_til_now
+
+print "%s %s status=%.1f %s" % (alarm_code, check_name, last_til_now, check_msg)
+
+exit(0)

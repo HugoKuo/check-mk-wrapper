@@ -1,0 +1,50 @@
+#! /usr/bin/python
+
+import os
+
+# TO-DO :
+# ./gen_checks <D_WARN> <D_CRIT> <S_WARN> <S_CRIT> <enable>
+# eg. ./gen_checks 24 50 24 100 acc,con
+# local_path="/usr/share/check-mk-agent/local/"
+
+
+D_WARN = raw_input("Warning threshold for daemon alive in hours: " )
+D_CRIT = raw_input("Critical threshold for daemon alive in hours: " )
+
+S_WARN = raw_input("\nWarning threshold for sweep time in hours: " )
+S_CRIT = raw_input("Critical threshold for sweep time in hours: " )
+enable_list = [ 'acc', 'con' , 'obj' ]
+
+daemons = { "acc_group" : [ "account-auditor", "account-reaper", "account-replicator"],
+            "con_group" : [ "container-auditor", "container-replicator", "container-updater"],
+            "obj_group" : [ "object-auditor", "object-replicator", "object-updater"]}
+gento = [ "acc_group", "con_group", "obj_group"]
+
+for i in gento:
+    if not os.path.exists(i):
+        os.makedirs(i)
+
+# Generating daemon checks
+for i in enable_list :
+    print "Generating daemon status for " + i+"_group"
+    for worker in daemons[i+"_group"]:
+        path = i+"_group/swiftstack-worker-"+worker
+        f1 = open('swiftstack-worker.template', 'r')
+        f2 = open(path, 'w')
+        for line in f1:
+            f2.write(line.replace('{{ WorkerName }}', worker).replace('{{ WarningThreshold }}',
+                     D_WARN).replace('{{ CriticalThreshold }}', D_CRIT))
+        os.chmod(path, 0o775)
+
+
+#Generating Sweep time checks
+for i in enable_list :
+    print "Generating sweep time for " + i+"_group"
+    for worker in daemons[i+"_group"]:
+        path = i+"_group/swiftstack-sweep-"+worker
+        f1 = open('swiftstack-sweep.template', 'r')
+        f2 = open(path, 'w')
+        for line in f1:
+            f2.write(line.replace('{{ WorkerName }}', worker).replace('{{ WarningThreshold }}',
+                     S_WARN).replace('{{ CriticalThreshold }}', S_CRIT))
+        os.chmod(path, 0o775)
