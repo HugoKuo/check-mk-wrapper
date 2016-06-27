@@ -63,7 +63,13 @@ CRITICAL = 100
 ## Usage : 
 
 ```
-$./gen_checks 
+$./gen_checks <WARNING_daemon> <CRITICAL_daemon> <WARNING_sweep> <CRITICAL_sweep>
+```
+
+or 
+
+```
+$./gen_checks --interact 
 ```
 
 The prompts ask for the threshold of each checks. The recommend value as below. 

@@ -1,5 +1,6 @@
 #! /usr/bin/python
 
+import sys
 import os
 
 # TO-DO :
@@ -7,14 +8,32 @@ import os
 # eg. ./gen_checks 24 50 24 100 acc,con
 # local_path="/usr/share/check-mk-agent/local/"
 
+if len(sys.argv) < 2:
+    print "\n This is a simple script for re-generating check_mk scripts with custom thresholds. \
+           \n\n   * WARNING_daemon - Hours of a Swift daemon since last log found.    \
+           \n   * CRITICAL_daemon - Hours of a Swift daemon since las log found. \
+           \n   * WARNING_sweep - Hours of last worker completion log. \
+           \n   * CRITICAL_sweep - Hours of last worker completion log. \
+           \n The CRITICAL must over the WARNING"
 
-D_WARN = raw_input("Warning threshold for daemon alive in hours: " )
-D_CRIT = raw_input("Critical threshold for daemon alive in hours: " )
+    print "\n    Usage: ./gen_checks <WARNING_daemon> <CRITICAL_daemon> <WARNING_sweep> <CRITICAL_sweep>\n "
+    sys.exit()
 
-S_WARN = raw_input("\nWarning threshold for sweep time in hours: " )
-S_CRIT = raw_input("Critical threshold for sweep time in hours: " )
+if sys.argv[1] == "--interact":
+    D_WARN = raw_input("Warning threshold for daemon alive in hours: " )
+    D_CRIT = raw_input("Critical threshold for daemon alive in hours: " )
+
+    S_WARN = raw_input("\nWarning threshold for sweep time in hours: " )
+    S_CRIT = raw_input("Critical threshold for sweep time in hours: " )
+
+if len(sys.argv) == 5:
+    print sys.argv
+    D_WARN = sys.argv[1]
+    D_CRIT = sys.argv[2]
+    S_WARN = sys.argv[3]
+    S_CRIT = sys.argv[4]
+
 enable_list = [ 'acc', 'con' , 'obj' ]
-
 daemons = { "acc_group" : [ "account-auditor", "account-reaper", "account-replicator"],
             "con_group" : [ "container-auditor", "container-replicator", "container-updater"],
             "obj_group" : [ "object-auditor", "object-replicator", "object-updater"]}
